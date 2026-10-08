@@ -17,8 +17,15 @@ public class FileEraser {
      * Wipes a target file, scrubs file content + slack space, resets timestamps, and unlinks it.
      */
     public static boolean wipeFile(File file, SanitizationStandard standard) {
+        return wipeFile(file, standard, false);
+    }
+
+    /**
+     * Wipes a target file, scrubs file content + slack space, resets timestamps, and unlinks it.
+     */
+    public static boolean wipeFile(File file, SanitizationStandard standard, boolean quiet) {
         if (!file.exists() || !file.isFile()) {
-            System.err.println("File does not exist or is not a regular file: " + file.getAbsolutePath());
+            if (!quiet) System.err.println("File does not exist or is not a regular file: " + file.getAbsolutePath());
             return false;
         }
 
@@ -72,12 +79,14 @@ public class FileEraser {
             File targetToDelete = renamed ? junkFile : file;
             boolean deleted = targetToDelete.delete();
 
-            System.out.printf("[FILE ERASED] %s (Size: %d bytes, Slack Scrubbed: %d bytes)%n",
-                    file.getName(), fileLength, slackSpaceBytes);
+            if (!quiet) {
+                System.out.printf("[FILE ERASED] %s (Size: %d bytes, Slack Scrubbed: %d bytes)%n",
+                        file.getName(), fileLength, slackSpaceBytes);
+            }
             return deleted;
 
         } catch (Exception e) {
-            System.err.println("Failed to securely wipe file: " + e.getMessage());
+            if (!quiet) System.err.println("Failed to securely wipe file: " + e.getMessage());
             return false;
         }
     }
