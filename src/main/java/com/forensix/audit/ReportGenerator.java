@@ -1,6 +1,5 @@
 package com.forensix.audit;
 
-import com.forensix.model.CarvedFile;
 import com.forensix.model.SanitizationStandard;
 import com.forensix.model.StorageDevice;
 
@@ -13,7 +12,6 @@ import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
 import java.io.File;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
 
 public class ReportGenerator {
 

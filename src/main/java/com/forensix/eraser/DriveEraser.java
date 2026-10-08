@@ -3,7 +3,6 @@ package com.forensix.eraser;
 import com.forensix.model.SanitizationStandard;
 import com.forensix.model.StorageDevice;
 import com.forensix.util.EntropyCalculator;
-import com.forensix.util.HashUtil;
 
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
@@ -32,7 +31,22 @@ public class DriveEraser {
 
         int totalPasses = standard.getTotalPasses();
 
-        try (RandomAccessFile disk = new RandomAccessFile(device.getDevicePath(), "rw");
+        String rawPath = device.getDevicePath();
+        if (rawPath.matches("^[a-zA-Z]:\\\\?$")) {
+            String letter = rawPath.substring(0, 1);
+            try {
+                // Force dismount active locks on Windows volume so raw IOCTL write is granted
+                ProcessBuilder pb = new ProcessBuilder(
+                        "powershell", "-NoProfile", "-Command",
+                        "Dismount-Volume -DriveLetter " + letter + " -Force -ErrorAction SilentlyContinue"
+                );
+                pb.start().waitFor();
+            } catch (Exception ignored) {}
+
+            rawPath = "\\\\.\\" + letter + ":";
+        }
+
+        try (RandomAccessFile disk = new RandomAccessFile(rawPath, "rw");
              FileChannel channel = disk.getChannel()) {
 
             for (int pass = 1; pass <= totalPasses; pass++) {

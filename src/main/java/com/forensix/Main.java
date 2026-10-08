@@ -18,6 +18,10 @@ import java.util.Scanner;
 public class Main {
 
     public static void main(String[] args) {
+        // Suppress PDFBox & FontBox verbose parser warning logs
+        java.util.logging.Logger.getLogger("org.apache.pdfbox").setLevel(java.util.logging.Level.OFF);
+        java.util.logging.Logger.getLogger("org.apache.fontbox").setLevel(java.util.logging.Level.OFF);
+
         System.out.println("=========================================================================================");
         System.out.println("    FORENSIX: Integrated Secure Data Erasure & Advanced File Recovery Platform           ");
         System.out.println("    National Technical Research Organisation (NTRO) - SIH26149 Prototype                   ");
@@ -103,7 +107,8 @@ public class Main {
 
                 System.out.printf("CONFIRMATION: Are you sure you want to PERMANENTLY WIPE %s using %s? (type 'WIPE' to proceed): ",
                         dev.getDevicePath(), std.getDisplayName());
-                if (scanner.nextLine().trim().equals("WIPE")) {
+                String confirm = scanner.nextLine().trim();
+                if (confirm.equalsIgnoreCase("WIPE")) {
                     boolean success = DriveEraser.sanitizeDrive(dev, std, (pass, totalPasses, bytes, total, entropy, pattern) -> {
                         double pct = (double) bytes / total * 100;
                         System.out.printf("\r[PROGRESS] %s | Pass %d/%d: %.1f%% | Entropy: %.4f bits/byte",
@@ -115,6 +120,8 @@ public class Main {
                     // Generate Forensic PDF Certificate
                     File certDir = new File("reports");
                     ReportGenerator.generateSanitizationCertificate(dev, std, "a1b2c3d4e5f678901234567890abcdef", certDir);
+                } else {
+                    System.out.println("\n[ABORTED] Wipe operation cancelled. Confirmation text did not match 'WIPE'.");
                 }
             }
         } catch (Exception e) {
@@ -137,22 +144,56 @@ public class Main {
     private static void runFileCarving(Scanner scanner) {
         System.out.print("\nEnter path to disk image file or drive (e.g., test_evidence.raw): ");
         String path = scanner.nextLine().trim();
-        File source = new File(path);
-        if (!source.exists()) {
-            System.err.println("Source path does not exist: " + path);
-            return;
+        
+        boolean isDeviceHandle = path.startsWith("\\\\.\\") || path.matches("^[a-zA-Z]:\\\\?$");
+        if (!isDeviceHandle) {
+            File source = new File(path);
+            if (!source.exists()) {
+                System.err.println("Source path does not exist: " + path);
+                return;
+            }
+            if (source.isDirectory()) {
+                String rootDrive = source.toPath().getRoot().toString().substring(0, 2);
+                System.out.println("[INFO] Folder directory path entered (" + path + "). Resolving to root volume " + rootDrive + " for raw sector carving...");
+                path = rootDrive;
+            }
+        }
+        if (path.matches("^[a-zA-Z]:$")) {
+            path = "\\\\.\\" + path;
+        } else if (path.matches("^[a-zA-Z]:\\\\$")) {
+            path = "\\\\.\\" + path.substring(0, 2);
         }
 
         File outputDir = new File("carved_output");
         System.out.println("\n[MODULE 3] Starting Forensic Magic-Byte File Carving engine...");
         List<CarvedFile> carved = FileCarver.carveDevice(path, outputDir, (bytes, total, found) -> {
-            double pct = (double) bytes / total * 100;
-            System.out.printf("\r[CARVING SCAN] Progress: %.1f%% | Files Extracted: %d", pct, found);
+            String scannedStr = (bytes >= 1024L * 1024L * 1024L) ?
+                    String.format("%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0)) :
+                    String.format("%.2f MB", bytes / (1024.0 * 1024.0));
+
+            if (total > 0 && total != Long.MAX_VALUE) {
+                String totalStr = (total >= 1024L * 1024L * 1024L) ?
+                        String.format("%.2f GB", total / (1024.0 * 1024.0 * 1024.0)) :
+                        String.format("%.2f MB", total / (1024.0 * 1024.0));
+                double pct = Math.min(100.0, (double) bytes / total * 100);
+                System.out.printf("\r[CARVING SCAN] Progress: %.1f%% (%s / %s) | Files Extracted: %d",
+                        pct, scannedStr, totalStr, found);
+            } else {
+                System.out.printf("\r[CARVING SCAN] Scanned: %s | Files Extracted: %d", scannedStr, found);
+            }
         });
 
-        System.out.println("\n\n--- CARVED EVIDENCE MANIFEST ---");
-        for (CarvedFile cf : carved) {
-            System.out.println(" - " + cf);
+        System.out.println("\n\n=========================================================================");
+        System.out.printf("  [SUCCESS] PHYSICAL HARDWARE SCAN COMPLETED! Extracted %d File(s)%n", carved.size());
+        System.out.println("=========================================================================");
+
+        System.out.println("\n--- CARVED EVIDENCE MANIFEST ---");
+        if (carved.isEmpty()) {
+            System.out.println("No unallocated or intact file signatures detected.");
+        } else {
+            for (CarvedFile cf : carved) {
+                System.out.println(" - " + cf);
+            }
         }
     }
 
@@ -209,6 +250,9 @@ public class Main {
             File reportsDir = new File("reports");
             File pdfCert = ReportGenerator.generateSanitizationCertificate(mockDev, SanitizationStandard.NIST_800_88_CLEAR,
                     HashUtil.calculateSHA256("FORENSIX_PURGE_SUCCESS".getBytes()), reportsDir);
+            if (pdfCert != null) {
+                System.out.println("  [CERTIFICATE CREATED] " + pdfCert.getName());
+            }
 
             System.out.println("\n=========================================================================");
             System.out.println("  DEMONSTRATION COMPLETED SUCCESSFULLY! ALL MODULES FUNCTIONAL!          ");

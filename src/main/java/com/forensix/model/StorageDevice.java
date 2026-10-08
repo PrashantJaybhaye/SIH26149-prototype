@@ -42,8 +42,13 @@ public class StorageDevice {
 
     @Override
     public String toString() {
-        return String.format("[%s] %s (%s) - %s [Sector: %dB]%s",
-                devicePath, model, interfaceType, getFormattedSize(), sectorSize,
-                isSystemDrive ? " (SYSTEM CRITICAL)" : "");
+        String cleanModel = model != null ? model.replaceAll("\\s*\\([a-zA-Z]:\\)", "").trim() : "Storage Volume";
+        return String.format("%-6s  %-20s  │  %-10s  │  Bus: %-16s  │  Sector: %d B%s",
+                "[" + devicePath + "]",
+                cleanModel,
+                getFormattedSize(),
+                interfaceType,
+                sectorSize,
+                isSystemDrive ? "  ⚠️  [SYSTEM CRITICAL]" : "");
     }
 }

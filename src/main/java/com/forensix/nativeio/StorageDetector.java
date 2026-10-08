@@ -55,13 +55,18 @@ public class StorageDetector {
         // Fallback or supplementary logical drives list if PowerShell disk listing is empty or fails
         if (list.isEmpty()) {
             File[] roots = File.listRoots();
+            javax.swing.filechooser.FileSystemView fsv = javax.swing.filechooser.FileSystemView.getFileSystemView();
             for (File root : roots) {
                 boolean isSys = root.getAbsolutePath().equalsIgnoreCase("C:\\");
                 long total = root.getTotalSpace();
                 if (total > 0) {
+                    String systemName = fsv.getSystemDisplayName(root);
+                    if (systemName == null || systemName.isEmpty()) {
+                        systemName = "Logical Volume (" + root.getAbsolutePath().substring(0, 2) + ")";
+                    }
                     list.add(new StorageDevice(
                             root.getAbsolutePath(),
-                            "Logical Volume (" + root.getAbsolutePath().substring(0, 2) + ")",
+                            systemName,
                             "VOL-" + root.getAbsolutePath().charAt(0),
                             total,
                             4096,

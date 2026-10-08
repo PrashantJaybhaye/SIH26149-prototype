@@ -1,7 +1,6 @@
 package com.forensix.eraser;
 
 import com.forensix.model.SanitizationStandard;
-import com.forensix.util.EntropyCalculator;
 
 import java.io.File;
 import java.io.RandomAccessFile;

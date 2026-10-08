@@ -47,7 +47,7 @@ public class FileSignature {
         signatures.add(new FileSignature(
                 "PDF Document", ".pdf",
                 new byte[]{0x25, 0x50, 0x44, 0x46, 0x2D}, // %PDF-
-                new byte[]{0x25, 0x25, 0x4F, 0x46},       // %%EOF
+                new byte[]{0x25, 0x25, 0x45, 0x4F, 0x46}, // %%EOF
                 50 * 1024 * 1024 // 50 MB max
         ));
 
